@@ -65,13 +65,15 @@ def put(key, value):
     db.put(key.encode("UTF-8"), value.encode("UTF-8"))
 
 def delete(key):
+    print("delete", key)
     key = key.encode("UTF-8")
     db.delete(key)
 
 def dump():
+    print("dump")
     out = {}
     for key, value in db:
-        out[ key ]= value
+        out[ key.decode("UTF-8") ]= value.decode("UTF-8")
     return out
 
 def handle_command(cmd):
