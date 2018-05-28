@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Electrum - lightweight Bitcoin client
 # Copyright (C) 2015 THomas Voegtlin
@@ -17,16 +17,15 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
-import thread, sys, socket, os, re
-import urllib2
-import Queue
+import sys, socket, os, re
+import urllib.request, urllib.error
 import traceback
 import plyvel
 import json, ast
 import time
-import ConfigParser
+import configparser
 
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 config.read("/etc/cosignerpool.conf")
 my_password = config.get('main','password')
 my_host = config.get('main','host')
@@ -35,7 +34,8 @@ dbpath = config.get('main', 'dbpath')
 
 
 def run_server():
-    from SimpleXMLRPCServer import SimpleXMLRPCServer
+    from xmlrpc.server import SimpleXMLRPCServer
+    from xmlrpc.server import SimpleXMLRPCRequestHandler
     server = SimpleXMLRPCServer((my_host, my_port), allow_none=True, logRequests=False)
     server.register_function(delete, 'delete')
     server.register_function(get, 'get')
@@ -48,19 +48,24 @@ def run_server():
             server.handle_request()
         except BaseException as e:
             traceback.print_exc(file=sys.stdout)
-    print "server stopped"
+    print("server stopped")
 
 def get(key):
-    o = db.get(key)
+    key = key.encode("UTF-8")
+    try:
+        o = db.get(key)
+    except Exception as e:
+        o = None
     if o:
-        print "get", key, len(o)
-    return o
+        print("get", key, len(o))
+    return o.decode("UTF-8")
 
 def put(key, value):
-    print "put", key, len(value)
-    db.put(key, value)
+    print("put", key, len(value))
+    db.put(key.encode("UTF-8"), value.encode("UTF-8"))
 
 def delete(key):
+    key = key.encode("UTF-8")
     db.delete(key)
 
 def dump():
@@ -70,8 +75,8 @@ def dump():
     return out
 
 def handle_command(cmd):
-    import xmlrpclib
-    server = xmlrpclib.ServerProxy('http://%s:%d'%(my_host, my_port), allow_none=True)
+    import xmlrpc.client
+    server = xmlrpc.client.ServerProxy('http://%s:%d'%(my_host, my_port), allow_none=True)
 
     try:
         if cmd == 'stop':
@@ -79,10 +84,10 @@ def handle_command(cmd):
         else:
             out = "unknown command"
     except socket.error:
-        print "Server not running"
+        print("Server not running")
         return 1
 
-    print out
+    print(out)
     return 0
 
 if __name__ == '__main__':
